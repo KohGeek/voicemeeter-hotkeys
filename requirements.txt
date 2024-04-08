@@ -1,0 +1,12 @@
+altgraph==0.17.4
+keyboard==0.13.5
+packaging==24.0
+pefile==2023.2.7
+pillow==10.3.0
+pyinstaller==6.5.0
+pyinstaller-hooks-contrib==2024.3
+pystray==0.19.5
+pywin32-ctypes==0.2.2
+setuptools==69.2.0
+six==1.16.0
+voicemeeter-api==2.5.3

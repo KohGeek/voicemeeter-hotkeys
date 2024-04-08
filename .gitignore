@@ -1,0 +1,13 @@
+# VS Code
+.vscode/
+
+# Build artifacts
+build/
+dist/
+hotkeys.spec
+
+# Pythons
+Include/
+Lib/
+Scripts/
+pyvenv.cfg
