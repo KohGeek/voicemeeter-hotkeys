@@ -55,11 +55,6 @@ Run the app as administrator, and make sure task scheduler is set to `Run with h
 
 No solution currently. If this is an issue, please report them through the issues tab.
 
-### Other issues
-
-- Sometimes task scheduler does not properly kill the app, so it complains that logs files are occupied.
-- The app only works with Voicemeeter Potato so far.
-
 ## Developers
 
 ### Building
@@ -87,8 +82,9 @@ The output of the build will be in the `dist` folder.
 
 - [ ] Document the code better
 - [ ] Refactor classes into different files
+- [ ] Remove Pillow from the dependencies
 
 #### Bugs
 
 - [ ] Fix the issue with numpad differentiation
-- [ ] Fix the issue with hotkeys breaking after locking and unlocking the computer
+- [x] Fix the issue with hotkeys breaking after locking and unlocking the computer

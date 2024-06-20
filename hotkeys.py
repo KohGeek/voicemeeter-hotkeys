@@ -1,5 +1,7 @@
 import logging
 import os
+import subprocess as s
+import sys
 import time
 
 from logging.handlers import RotatingFileHandler
@@ -8,6 +10,7 @@ from tkinter import Tk
 from tkinter.ttk import Frame, Label, Style
 
 import keyboard
+import psutil
 import pystray
 import voicemeeterlib as vml
 
@@ -56,6 +59,7 @@ class Overlay:
         self.restart_draw()
 
         self.mute_frame.grid(row=0, column=0)
+        self.restart_frame.grid(row=0, column=0)
         self.last_mute = time.time()
         self.last_restart = time.time()
 
@@ -240,6 +244,7 @@ class VPotato:
 
 def main():
     try:
+        global taskkill
         with vml.api("potato", pdirty=True) as vm:
             restart_event = Event()
             ui = Overlay(TK_ROOT, restart_event)
@@ -247,8 +252,12 @@ def main():
 
             vp.check_mute()
 
-            LOG.info("Waiting if mute is active or any hotkey is pressed...")
+            LOG.info("Waiting if mute is active, any hotkey is pressed or program is exited...")
             DISPLAY_EVENT.wait()
+
+            if taskkill:
+                LOG.info("Taskkill flag detected. Exiting program...")
+                raise SystemExit
 
             LOG.info("All good! Activating overlay.")
 
@@ -265,8 +274,30 @@ def main():
 
 
 def log_init():
+    log_pid = None
+    past_pid = None
+    pid = os.getppid()
+    
     if not os.path.exists("logs"):
         os.makedirs("logs")
+
+    if not os.path.exists("logs/hotkeys.pid"):
+        with open("logs/hotkeys.pid", "w") as f:
+            f.write("")
+    
+    if not os.path.exists("logs/hotkeys.log"):
+        with open("logs/hotkeys.log", "w") as f:
+            f.write("First Log\n\n")
+
+    with open("logs/hotkeys.log", "r") as f:
+        log_pid = f.readline().split(' ')[-1].strip()
+        log_pid = int(log_pid) if log_pid.isnumeric() else log_pid
+
+    with open("logs/hotkeys.pid", "r") as f:
+        past_pid = f.read()
+        past_pid = int(past_pid) if past_pid.isnumeric() else None
+        kill_process(past_pid) if past_pid == log_pid else None
+        
 
     handler = RotatingFileHandler(filename="logs/hotkeys.log", backupCount=5)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -278,11 +309,35 @@ def log_init():
     LOG.addHandler(handler)
     LOG.setLevel(level)
 
+    with open("logs/hotkeys.pid", "w") as f:
+        f.write(str(pid))
+    
+    LOG.info(f"Hotkeys PID: {pid}")
+    LOG.debug(f"Logged PID: {log_pid} - Assumed Previous PID: {past_pid}")
+
 
 def exit():
-    icon.stop()
+    global taskkill 
+    taskkill = True
+    
+    DISPLAY_EVENT.set()
     keyboard.unhook_all()
     TK_ROOT.quit()
+    
+    with open("logs/hotkeys.pid", "w") as f:
+        f.write("")
+
+    icon.stop()
+
+
+def kill_process(pid):
+    p = psutil.Process(pid)
+    name = p.name()
+    if name != os.path.basename(sys.executable):
+        return
+    ps = s.Popen(f'taskkill /F /T /PID {format(pid)}', shell=True)
+    ps.wait()
+    time.sleep(3)
 
 
 if __name__ == "__main__":
@@ -296,18 +351,21 @@ if __name__ == "__main__":
     MUTE_HOTKEY = "windows+shift+num 0"
     RESTART_HOTKEY = "windows+shift+pause"
 
-    log_init()
-
     MUTE_IMG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'img/mute.png'))
     TRAY_IMG = os.path.abspath(os.path.join(os.path.dirname(__file__), 'img/tray.png'))
 
-    menu = pystray.Menu(pystray.MenuItem("Exit", exit))
-    icon = pystray.Icon("VB HotKeys", Image.open(TRAY_IMG), "VB Hotkeys", menu=menu)
-    icon.run_detached()
+    taskkill = False
 
     try:
+        log_init()
+
+        menu = pystray.Menu(pystray.MenuItem("Exit", exit))
+        icon = pystray.Icon("VB HotKeys", Image.open(TRAY_IMG), "VB Hotkeys", menu=menu)
+        icon.run_detached()
+
         main()
+
     except KeyboardInterrupt:
-        exit()
         LOG.info("Exiting...")
+        exit()
         raise SystemExit

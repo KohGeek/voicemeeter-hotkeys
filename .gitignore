@@ -6,6 +6,9 @@ build/
 dist/
 hotkeys.spec
 
+# Test artifacts
+logs/
+
 # Pythons
 Include/
 Lib/
