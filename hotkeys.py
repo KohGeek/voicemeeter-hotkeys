@@ -24,6 +24,7 @@ class Overlay:
     Uses the "-topmost" property to always stay on top of other Windows
     """
 
+    start_time = time.time()
     mute = False
     restart = False
     img = None
@@ -60,28 +61,47 @@ class Overlay:
 
         self.mute_frame.grid(row=0, column=0)
         self.restart_frame.grid(row=0, column=0)
-        self.last_mute = time.time()
-        self.last_restart = time.time()
+        init_time = time.time()
+        self.last_mute = init_time
+        self.last_restart = init_time
 
         self.root.after(200, self.update_ui)
+
+    
+    def vm_event(self, eve):
+        if eve == "restart":
+            if self.mute_frame.winfo_ismapped():
+                self.mute_frame.grid_forget()
+            self.restart_frame.grid(row=0, column=0)
+        elif eve == "mute":
+            if self.restart_frame.winfo_ismapped():
+                self.restart_frame.grid_forget()
+            self.mute_frame.grid(row=0, column=0)
+        self.root.deiconify()
 
 
     def update_ui(self):
         """
         Toggles the visibility of the overlay window
+        Need to handle:
+        - Muted and restarting
+            - Muted after restart -> cancel restart window, show mute
+            - Restart after mute -> pause mute window, timeout restart window after 5 seconds
+        - Muted - show mute window
+        - Restarting - show restart window
+        - No event -> withdraw window
         """
-        if self.restart:
-            if self.last_restart < self.last_mute and self.mute:
+
+        if self.mute and self.restart:
+            if self.last_restart < self.last_mute:
                 self.restart_event.set()
-            if self.mute_frame.winfo_ismapped():
-                self.mute_frame.grid_forget()
-            self.restart_frame.grid(row=0, column=0)
-            self.root.deiconify()
+                self.vm_event("mute")
+            else:
+                self.vm_event("restart")
+        elif self.restart:
+            self.vm_event("restart")
         elif self.mute:
-            if self.restart_frame.winfo_ismapped():
-                self.restart_frame.grid_forget()
-            self.mute_frame.grid(row=0, column=0)
-            self.root.deiconify()
+            self.vm_event("mute")
         else:
             self.root.withdraw()
 
@@ -198,8 +218,9 @@ class VPotato:
     def toggle_mute(self):
         mute = self.vm.bus[5].mute
         self.vm.bus[5].mute = not mute
-        mute = not mute
-        
+        if not (self.vm.bus[5].mute == mute):
+            mute = not mute
+
         if self.mute != self.ui.mute:
             self.ui.last_mute = time.time()
             self.ui.mute = not mute
@@ -211,15 +232,18 @@ class VPotato:
 
 
     def restart_audio(self):
-        self.vm.command.restart()
-        self.ui.restart = True
-        self.ui.last_restart = time.time()
-        Thread(target=self.ui.update_ui).start()
-        self.restart_event.wait(5)
-        self.ui.restart = False
-        self.restart_event.clear()
+        req_time = time.time()
+        if (not (req_time - self.ui.last_restart < 3)) or (req_time - self.ui.start_time < 3):
+            self.vm.command.restart()
+            self.ui.restart = True
+            self.ui.last_restart = time.time()
+            Thread(target=self.ui.update_ui).start()
 
-        DISPLAY_EVENT.set()
+            DISPLAY_EVENT.set()
+
+            self.restart_event.wait(3)
+            self.ui.restart = False
+            self.restart_event.clear()
 
         LOG.info("Voicemeeter audio engine restarted.")
 

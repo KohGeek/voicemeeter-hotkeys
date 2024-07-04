@@ -20,7 +20,7 @@ Download the latest release and just run the .exe file in adminstrator mode.
 
 ## Features
 
-- Mute/Unmute B1 Channel: `Win` + `Shift` + `Num 0`
+- Mute/Unmute B1 Channel: `Win` + `Shift` + `Num 0`/`0`
 - Restart audio engine: `Win` + `Shift` + `Pause`
 - Unintrusive overlay to show current status
 - Tray icon for easier management
@@ -87,4 +87,3 @@ The output of the build will be in the `dist` folder.
 #### Bugs
 
 - [ ] Fix the issue with numpad differentiation
-- [x] Fix the issue with hotkeys breaking after locking and unlocking the computer
