@@ -355,13 +355,16 @@ def exit():
 
 
 def kill_process(pid):
-    p = psutil.Process(pid)
-    name = p.name()
-    if name != os.path.basename(sys.executable):
-        return
-    ps = s.Popen(f'taskkill /F /T /PID {format(pid)}', shell=True)
-    ps.wait()
-    time.sleep(3)
+    try:
+        p = psutil.Process(pid)
+        name = p.name()
+        if name != os.path.basename(sys.executable):
+            return
+        ps = s.Popen(f'taskkill /F /T /PID {format(pid)}', shell=True)
+        ps.wait()
+        time.sleep(3)
+    except psutil.NoSuchProcess:
+        LOG.info("PID matches, but no such process found. Continuing...")
 
 
 if __name__ == "__main__":
